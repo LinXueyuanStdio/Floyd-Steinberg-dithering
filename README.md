@@ -10,4 +10,4 @@ python -m http.server 8899
 
 ## reference
 
-![https://en.wikipedia.org/wiki/Floyd%E2%80%93Steinberg_dithering](https://en.wikipedia.org/wiki/Floyd%E2%80%93Steinberg_dithering)
+[https://en.wikipedia.org/wiki/Floyd%E2%80%93Steinberg_dithering](https://en.wikipedia.org/wiki/Floyd%E2%80%93Steinberg_dithering)
