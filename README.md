@@ -2,12 +2,28 @@
 
 Floyd–Steinberg dithering process for EOS project
 
+## app
+
 ```shell
 cd html
 python -m http.server 8899
 ```
 
-访问 `http://127.0.0.1:8899`，把图片拖进去即可。
+visit `http://127.0.0.1:8899`，drag-and-drop your picture(`.jpg/.png`)。
+
+## cmd
+
+```shell
+npm link
+dth run -p ./example.jpg -c canvasID -x 20 -y 20
+```
+
+more opts, run:
+
+```shell
+dth -h
+dth run -h
+```
 
 ## reference
 
