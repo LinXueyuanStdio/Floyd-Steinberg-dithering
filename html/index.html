@@ -5,11 +5,41 @@
   <meta name="viewport" content="width=600, initial-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="ie=edge">
   <title>Floyd-Steinberg dithering</title>
+  <style>
+    main {
+      width: 100%;
+      min-height: 152px;
+      display: flex;
+    }
+    main > div {
+      border-color: #cfb278;
+      color: white;
+      margin: auto;
+      padding: .3em 1em .5em;
+      border-radius: 3px;
+      box-shadow: 0 0 .5em #b4a078;
+    }
+
+    main > div > div {
+      width: 100%;
+      height: auto;
+      display: flex;
+    }
+    main > div > div > p {
+      color: #8236b4;
+      margin: auto;
+      padding: .3em 1em .5em;
+    }
+  </style>
 </head>
 <body>
-  <p>把一张图片丢进来</p>
-  <img id="image"/>
-  <canvas id="canvas"  width="auto" height="auto"></canvas>
+  <main class="main">
+    <div>
+      <div><p>把一张图片丢进来</p></div>
+      <img id="image"/>
+      <canvas id="canvas"  width="auto" height="auto"></canvas>
+    </div>
+  </main>
   <script language="javascript" type="text/javascript" src="./dithering.js"></script>
 </body>
 </html>
