@@ -4,24 +4,22 @@ var canvas = document.getElementById("canvas");
 var context = canvas.getContext("2d");
 var img = new Image();
 
-function onDrag(e) {
+var onDrag = e => {
   e.stopPropagation();
   e.preventDefault();
 }
 
-function onDrop(e) {
+var onDrop = e => {
   e.stopPropagation();
   e.preventDefault();
 
   var file  = e.dataTransfer.files[0];
   if(!file.type.match(/image.*/)) return;
   var reader = new FileReader();
-  reader.onload = (function(file) {
-    return function(e){
-      originImg.src = e.target.result;
-      img.src = e.target.result;
-    }
-  })(file);
+  reader.onload = e => {
+    originImg.src = e.target.result;
+    img.src = e.target.result;
+  };
   reader.readAsDataURL(file);
 }
 
@@ -30,12 +28,8 @@ canvas.addEventListener('dragleave', onDrag, false);
 canvas.addEventListener('dragover', onDrag, false);
 canvas.addEventListener('drop', onDrop, false);
 
-function palette(color) {
-  var c = parseInt(
-    (color.r + color.g + color.b) / 3 > 128
-    ? 255
-    : 0
-  );
+var palette = color => {
+  var c = parseInt((color.r + color.g + color.b) / 3) > 128 ? 255 : 0;
   return {
     r : c,
     g : c,
@@ -44,7 +38,7 @@ function palette(color) {
   };
 }
 
-function getError(oldColor, newColor) {
+var getError = (oldColor, newColor) => {
   var oldColorAver = parseInt((oldColor.r + oldColor.g + oldColor.b) / 3);
   var newColorAver = parseInt((newColor.r + newColor.g + newColor.b) / 3);
   var err = oldColorAver - newColorAver;
@@ -56,7 +50,7 @@ function getError(oldColor, newColor) {
   };
 }
 
-function dithering(data, w) {
+var dithering = (data, w) => {
   for (var i = 0; i < data.length; i+= 4){
     var oldColor = {
       r : data[i+0],
@@ -95,7 +89,7 @@ function dithering(data, w) {
   }
 }
 
-img.addEventListener('load', function(){
+img.addEventListener('load', () => {
   var w = this.width;
   var h = this.height;
 
