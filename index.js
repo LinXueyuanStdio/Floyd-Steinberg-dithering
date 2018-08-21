@@ -2,6 +2,7 @@
 
 const program = require('commander')
 const chalk = require('chalk')
+const dth = require('./build/dth')
 
 program
     .command('example') // 命令行指令
@@ -28,10 +29,7 @@ program
     .description(chalk.green('dithering pic into canvas in (x,y)')) // 这行文字变绿~
     // 注册一个 `callback` 函数
     .action(option => {
-        console.log(option.pic)
-        console.log(option.into)
-        console.log(option.x)
-        console.log(option.y)
+        dth.DTH2(option)
     })
     // 生成帮助信息
     .on('--help', () => {
