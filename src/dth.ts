@@ -1,18 +1,30 @@
-import {
-  colorArr,
-  colorDistance,
-  Color
-} from './eightBitColors'
-
 import { readFileSync, createWriteStream } from 'fs'
 var Canvas = require('canvas');
 var images = require("images");
+import {
+  colorArr,
+  colorDistance,
+  Color,
+  toCoordinate
+} from './eightBitColors'
+import { eos } from './eos'
+import config from './config'
+
+const { PIXELS_PER_ACTION, PIXELS_PER_TRANSACTION } = config
+const ROWS_LIMIT = 1000 * 1000
+const CONTRACT_NAME = config.EOS_CONTRACT_NAME
 
 interface Option {
   picPath: string, // picture path, e.g. "./abc/abc/a.jpg"
-  canvas: number, // canvas id in contract
+  canvasId: number, // canvas id in contract
   x: number, // (x, y) in canvas top-left
   y: number,
+}
+
+export interface IPixel {
+  colorIndex: number // color index in colors from './eightBitColors.ts'
+  price: number
+  priceCounter: number
 }
 
 var palette = (color: Color): Color => {
@@ -80,8 +92,8 @@ let img = new Canvas.Image(), start = new Date()
 img.onerror = (err) => {
   throw err
 }
-// 图片加载完成
-img.onload = function () {
+
+img.onload = () => {
   //    获取图片的width和height
   let width = img.width
     , height = img.height
@@ -93,7 +105,9 @@ img.onload = function () {
   ctx.drawImage(img, 0, 0, width, height)
 
   let imageData = ctx.getImageData(0, 0, width, height),
-      data = imageData.data
+    data = imageData.data
+
+  console.log("canvas img length : " + data.length)
 
   dithering(data, width)
 
@@ -101,30 +115,50 @@ img.onload = function () {
   ctx.putImageData(imageData, 0, 0)
 
   // 将修改后的图片保存
-  let out = createWriteStream("./what.png"),
-      stream = canvas.pngStream()
+  let out = createWriteStream("./output.png"),
+    stream = canvas.pngStream()
 
   stream.on('data', function (chunk) {
     out.write(chunk)
   })
 
   stream.on('end', function () {
-    console.log(`保存到 ./`)
+    console.log(`保存到 ./output.png`)
     console.log(`耗时: ${new Date().getMilliseconds() - start.getMilliseconds()}ms`)
   })
 }
+var data2TxPixelArr = (data: Uint8Array, w: number) => {
+  var pixels: Array<IPixel> = []
+  for (var i = 0; i < data.length; i += 4) {
+    var oldColor = {
+      r: data[i + 0],
+      g: data[i + 1],
+      b: data[i + 2],
+      a: data[i + 3],
+    };
+    var newColor = palette(oldColor);
+    pixels.push({
+      colorIndex: 2,
+      price: 2,
+      priceCounter:  2
+    })
+  }
+}
+var sendTx = (pixels: Array<IPixel>, w: number, canvasId: number, x: number, y: number) => {
 
-export function DTH(picPath, canvas, x, y) {
-  // 同步读取
-  var data = readFileSync(picPath)
+}
+
+export function DTH(picPath, canvasId, x, y) {
   img.src = picPath
+  var data = readFileSync(picPath)
   console.log("同步读取: " + data.length)
+  console.log(new Uint8Array(new Buffer(data)).length)
   console.log(picPath)
-  console.log(canvas)
+  console.log(canvasId)
   console.log(x)
   console.log(y)
 }
 
 export function DTH2(option: Option) {
-  DTH(option.picPath, option.canvas, option.x, option.y)
+  DTH(option.picPath, option.canvasId, option.x, option.y)
 }

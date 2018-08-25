@@ -3,6 +3,10 @@ var canvas = document.getElementById("canvas");
 var context = canvas.getContext("2d");
 var img = new Image();
 
+var canvas2 = document.getElementById("canvas2");
+var context2 = canvas2.getContext("2d");
+var img2 = new Image();
+
 var onDrag = e => {
   e.stopPropagation();
   e.preventDefault();
@@ -18,6 +22,7 @@ var onDrop = e => {
   reader.onload = e => {
     originImg.src = e.target.result;
     img.src = e.target.result;
+    img2.src = e.target.result;
   };
   reader.readAsDataURL(file);
 }
@@ -27,17 +32,6 @@ canvas.addEventListener('dragleave', onDrag, false);
 canvas.addEventListener('dragover', onDrag, false);
 canvas.addEventListener('drop', onDrop, false);
 
-
-/*
-def ColourDistance(rgb_1, rgb_2):
-     R_1,G_1,B_1 = rgb_1
-     R_2,G_2,B_2 = rgb_2
-     rmean = (R_1 +R_2 ) / 2
-     R = R_1 - R_2
-     G = G_1 -G_2
-     B = B_1 - B_2
-     return math.sqrt((2+rmean/256)*(R**2)+4*(G**2)+(2+(255-rmean)/256)*(B**2))
-*/
 function colorDistance(rgb_1, rgb_2) {
   var rmean = (rgb_1.r + rgb_2.r) / 2
   var R = rgb_1.r - rgb_2.r
@@ -342,15 +336,6 @@ var palette = color => {
   });
 
   return colorArr[distanceArr.indexOf(Math.min(...distanceArr))]
-
-  // var c = (color.r + color.g + color.b) / 3 > 128 ? 0xff : 0x00;
-  // return hexToRgb("#123456")
-  // return {
-  //   r : color.r > 0x80 ? 0xcd : 0x00,
-  //   g : color.g > 0x80 ? 0x4c : 0x00,
-  //   b : color.b > 0x80 ? 0xf5 : 0x00,
-  //   a : 0xff,
-  // };
 }
 
 var getError = (oldColor, newColor) => {
@@ -404,6 +389,23 @@ var dithering = (data, w) => {
   }
 }
 
+var toPallet = (data) => {
+  for (var i = 0; i < data.length; i += 4) {
+    var oldColor = {
+      r: data[i + 0],
+      g: data[i + 1],
+      b: data[i + 2],
+      a: data[i + 3],
+    };
+    var newColor = palette(oldColor);
+
+    data[i + 0] = newColor.r;
+    data[i + 1] = newColor.g;
+    data[i + 2] = newColor.b;
+    data[i + 3] = newColor.a;
+  }
+}
+
 img.addEventListener('load', () => {
   var w = img.width;
   var h = img.height;
@@ -418,4 +420,21 @@ img.addEventListener('load', () => {
   dithering(imgData.data, w);
 
   context.putImageData(imgData, 0, 0);
+});
+
+img2.addEventListener('load', () => {
+  var w = img2.width;
+  var h = img2.height;
+
+  canvas2.setAttribute('width', w);
+  canvas2.setAttribute('height', h);
+
+  context2.drawImage(img2, 0, 0);
+
+  var imgData = context2.getImageData(0, 0, w, h);
+
+  dithering(imgData.data, w);
+  toPallet(imgData.data)
+
+  context2.putImageData(imgData, 0, 0);
 });

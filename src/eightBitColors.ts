@@ -307,3 +307,8 @@ export function colorDistance(rgb_1: Color, rgb_2: Color): number {
     (2 + rmean / 256) * (R ** 2) + 4 * (G ** 2) + (2 + (255 - rmean) / 256) * (B ** 2)
   )
 }
+
+export function toCoordinate(x: number, y: number): number {
+  // tslint:disable-next-line no-bitwise
+  return (y << 10) | x
+}

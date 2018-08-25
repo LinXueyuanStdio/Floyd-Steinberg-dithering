@@ -1,8 +1,12 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-var eightBitColors_1 = require("./eightBitColors");
 var fs_1 = require("fs");
 var Canvas = require('canvas');
+var images = require("images");
+var eightBitColors_1 = require("./eightBitColors");
+var config_1 = require("./config");
+var ROWS_LIMIT = 1000 * 1000;
+var CONTRACT_NAME = config_1.default.EOS_CONTRACT_NAME;
 var palette = function (color) {
     var distanceArr = [];
     eightBitColors_1.colorArr.forEach(function (c) {
@@ -57,39 +61,32 @@ var img = new Canvas.Image(), start = new Date();
 img.onerror = function (err) {
     throw err;
 };
-// 图片加载完成
 img.onload = function () {
     //    获取图片的width和height
     var width = img.width, height = img.height, canvas = new Canvas(width, height), ctx = canvas.getContext('2d');
     // 将源图片复制到画布上
     // canvas 所有的操作都是在 context 上，所以要先将图片放到画布上才能操作
     ctx.drawImage(img, 0, 0, width, height);
-    var imageData = ctx.getImageData(0, 0, width, height)
-    // 获取画布的像素信息
-    // 是一个一维数组，包含以 RGBA 顺序的数据，数据使用  0 至 255（包含）的整数表示
-    // 如：图片由两个像素构成，一个像素是白色，一个像素是黑色，那么 data 为
-    // [255,255,255,255,0,0,0,255] 
-    // 这个一维数组可以看成是两个像素中RBGA通道的数组的集合即:
-    // [R,G,B,A].concat([R,G,B,A])
-    , data = imageData.data;
+    var imageData = ctx.getImageData(0, 0, width, height), data = imageData.data;
+    console.log("canvas img length : " + data.length);
     dithering(data, width);
     // 将修改后的代码复制回画布中
     ctx.putImageData(imageData, 0, 0);
     // 将修改后的图片保存
-    var out = fs_1.createWriteStream("./what.jpg"), stream = canvas.pngStream();
+    var out = fs_1.createWriteStream("./output.png"), stream = canvas.pngStream();
     stream.on('data', function (chunk) {
         out.write(chunk);
     });
     stream.on('end', function () {
-        console.log("\u4FDD\u5B58\u5230 ./");
+        console.log("\u4FDD\u5B58\u5230 ./output.png");
         console.log("\u8017\u65F6: " + (new Date().getMilliseconds() - start.getMilliseconds()) + "ms");
     });
 };
 function DTH(picPath, canvas, x, y) {
-    // 同步读取
-    var data = fs_1.readFileSync(picPath);
     img.src = picPath;
+    var data = fs_1.readFileSync(picPath);
     console.log("同步读取: " + data.length);
+    console.log(new Uint8Array(new Buffer(data)).length);
     console.log(picPath);
     console.log(canvas);
     console.log(x);
