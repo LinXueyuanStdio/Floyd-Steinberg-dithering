@@ -1,54 +1,11 @@
-var originImg = document.getElementById("image");
-var canvas = document.getElementById("canvas");
-var context = canvas.getContext("2d");
-var img = new Image();
-
-var onDrag = e => {
-  e.stopPropagation();
-  e.preventDefault();
+export interface Color {
+  r: number,
+  g: number,
+  b: number,
+  a: number,
 }
 
-var onDrop = e => {
-  e.stopPropagation();
-  e.preventDefault();
-
-  var file = e.dataTransfer.files[0];
-  if (!file.type.match(/image.*/)) return;
-  var reader = new FileReader();
-  reader.onload = e => {
-    originImg.src = e.target.result;
-    img.src = e.target.result;
-  };
-  reader.readAsDataURL(file);
-}
-
-canvas.addEventListener('dragenter', onDrag, false);
-canvas.addEventListener('dragleave', onDrag, false);
-canvas.addEventListener('dragover', onDrag, false);
-canvas.addEventListener('drop', onDrop, false);
-
-
-/*
-def ColourDistance(rgb_1, rgb_2):
-     R_1,G_1,B_1 = rgb_1
-     R_2,G_2,B_2 = rgb_2
-     rmean = (R_1 +R_2 ) / 2
-     R = R_1 - R_2
-     G = G_1 -G_2
-     B = B_1 - B_2
-     return math.sqrt((2+rmean/256)*(R**2)+4*(G**2)+(2+(255-rmean)/256)*(B**2))
-*/
-function colorDistance(rgb_1, rgb_2) {
-  var rmean = (rgb_1.r + rgb_2.r) / 2
-  var R = rgb_1.r - rgb_2.r
-  var G = rgb_1.g - rgb_2.g
-  var B = rgb_1.b - rgb_2.b
-  return Math.sqrt(
-    (2 + rmean / 256) * (R ** 2) + 4 * (G ** 2) + (2 + (255 - rmean) / 256) * (B ** 2)
-  )
-}
-
-const colors = [
+export const colors = [
   '#400000',
   '#400000',
   '#400900',
@@ -307,17 +264,20 @@ const colors = [
   '#ffffff',
 ]
 
-function hexToRgb(hex) {
+export const BLANK_INDEX = 255
+export const BLACK_INDEX = 15
+
+export function hexToRgb(hex) {
   var rgb = [];
 
-  hex = hex.substr(1); //去除前缀 # 号
+  hex = hex.substr(1);//去除前缀 # 号
 
   if (hex.length === 3) { // 处理 "#abc" 成 "#aabbcc"
     hex.replace(/(.)/g, '$1$1');
   }
 
   hex.replace(/../g, (color) => {
-    rgb.push(parseInt(color, 0x10)); //按16进制将字符串转换为数字
+    rgb.push(parseInt(color, 0x10));//按16进制将字符串转换为数字
   });
 
   return {
@@ -327,95 +287,23 @@ function hexToRgb(hex) {
     a: 0xff,
   };
 };
-var getColors = () => {
+
+var getColors = () : Array<Color> => {
   var colorArr = [];
   colors.forEach(cStr => {
     colorArr.push(hexToRgb(cStr))
   });
   return colorArr;
 }
-const colorArr = getColors()
-var palette = color => {
-  var distanceArr = []
-  colorArr.forEach((c) => {
-    distanceArr.push(colorDistance(color, c))
-  });
 
-  return colorArr[distanceArr.indexOf(Math.min(...distanceArr))]
+export const colorArr = getColors()
 
-  // var c = (color.r + color.g + color.b) / 3 > 128 ? 0xff : 0x00;
-  // return hexToRgb("#123456")
-  // return {
-  //   r : color.r > 0x80 ? 0xcd : 0x00,
-  //   g : color.g > 0x80 ? 0x4c : 0x00,
-  //   b : color.b > 0x80 ? 0xf5 : 0x00,
-  //   a : 0xff,
-  // };
+export function colorDistance(rgb_1: Color, rgb_2: Color): number {
+  var rmean = (rgb_1.r + rgb_2.r) / 2
+  var R = rgb_1.r - rgb_2.r
+  var G = rgb_1.g - rgb_2.g
+  var B = rgb_1.b - rgb_2.b
+  return Math.sqrt(
+    (2 + rmean / 256) * (R ** 2) + 4 * (G ** 2) + (2 + (255 - rmean) / 256) * (B ** 2)
+  )
 }
-
-var getError = (oldColor, newColor) => {
-  var oldColorAver = (oldColor.r + oldColor.g + oldColor.b / 3);
-  var newColorAver = (newColor.r + newColor.g + newColor.b / 3);
-  var err = oldColorAver - newColorAver;
-  return {
-    r: err,
-    g: err,
-    b: err,
-    a: 0xff,
-  };
-}
-
-var dithering = (data, w) => {
-  for (var i = 0; i < data.length; i += 4) {
-    var oldColor = {
-      r: data[i + 0],
-      g: data[i + 1],
-      b: data[i + 2],
-      a: data[i + 3],
-    };
-    var newColor = palette(oldColor);
-
-    data[i + 0] = newColor.r;
-    data[i + 1] = newColor.g;
-    data[i + 2] = newColor.b;
-    data[i + 3] = newColor.a;
-
-    var err = getError(oldColor, newColor);
-
-    data[i + 0 + 4] += 7 / 16 * err.r;
-    data[i + 1 + 4] += 7 / 16 * err.g;
-    data[i + 2 + 4] += 7 / 16 * err.b;
-    data[i + 3 + 4] += 7 / 16 * err.a;
-
-    data[i + 0 + w * 4 - 4] += 3 / 16 * err.r;
-    data[i + 1 + w * 4 - 4] += 3 / 16 * err.g;
-    data[i + 2 + w * 4 - 4] += 3 / 16 * err.b;
-    data[i + 3 + w * 4 - 4] += 3 / 16 * err.a;
-
-    data[i + 0 + w * 4] += 5 / 16 * err.r;
-    data[i + 1 + w * 4] += 5 / 16 * err.g;
-    data[i + 2 + w * 4] += 5 / 16 * err.b;
-    data[i + 3 + w * 4] += 5 / 16 * err.a;
-
-    data[i + 0 + w * 4 + 4] += 1 / 16 * err.r;
-    data[i + 1 + w * 4 + 4] += 1 / 16 * err.g;
-    data[i + 2 + w * 4 + 4] += 1 / 16 * err.b;
-    data[i + 3 + w * 4 + 4] += 1 / 16 * err.a;
-  }
-}
-
-img.addEventListener('load', () => {
-  var w = img.width;
-  var h = img.height;
-
-  canvas.setAttribute('width', w);
-  canvas.setAttribute('height', h);
-
-  context.drawImage(img, 0, 0);
-
-  var imgData = context.getImageData(0, 0, w, h);
-
-  dithering(imgData.data, w);
-
-  context.putImageData(imgData, 0, 0);
-});

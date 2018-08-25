@@ -14,6 +14,7 @@ visit `http://127.0.0.1:8899`，drag-and-drop your picture(`.jpg/.png`)。
 ## cmd
 
 ```shell
+tsc
 npm link
 dth run -p ./example.jpg -c canvasID -x 20 -y 20
 ```
