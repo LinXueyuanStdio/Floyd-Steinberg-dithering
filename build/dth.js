@@ -1,31 +1,11 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-var fs_1 = require("fs");
-var Canvas = require('canvas');
-var images = require("images");
-var eightBitColors_1 = require("./eightBitColors");
-var config_1 = require("./config");
-var ROWS_LIMIT = 1000 * 1000;
-var CONTRACT_NAME = config_1.default.EOS_CONTRACT_NAME;
-var palette = function (color) {
-    var distanceArr = [];
-    eightBitColors_1.colorArr.forEach(function (c) {
-        distanceArr.push(eightBitColors_1.colorDistance(color, c));
-    });
-    return eightBitColors_1.colorArr[distanceArr.indexOf(Math.min.apply(Math, distanceArr))];
-};
-var getError = function (oldColor, newColor) {
-    var oldColorAver = (oldColor.r + oldColor.g + oldColor.b / 3);
-    var newColorAver = (newColor.r + newColor.g + newColor.b / 3);
-    var err = oldColorAver - newColorAver;
-    return {
-        r: err,
-        g: err,
-        b: err,
-        a: 0xff,
-    };
-};
-var dithering = function (data, w) {
+var getPixels = require("get-pixels");
+const eightBitColors_1 = require("./eightBitColors");
+const pixel_1 = require("./pixel");
+const config_1 = require("./config");
+const packMemo_1 = require("./packMemo");
+var dithering = (data, w) => {
     for (var i = 0; i < data.length; i += 4) {
         var oldColor = {
             r: data[i + 0],
@@ -33,12 +13,12 @@ var dithering = function (data, w) {
             b: data[i + 2],
             a: data[i + 3],
         };
-        var newColor = palette(oldColor);
+        var newColor = eightBitColors_1.palette(oldColor);
         data[i + 0] = newColor.r;
         data[i + 1] = newColor.g;
         data[i + 2] = newColor.b;
         data[i + 3] = newColor.a;
-        var err = getError(oldColor, newColor);
+        var err = eightBitColors_1.getColorError(oldColor, newColor);
         data[i + 0 + 4] += 7 / 16 * err.r;
         data[i + 1 + 4] += 7 / 16 * err.g;
         data[i + 2 + 4] += 7 / 16 * err.b;
@@ -56,44 +36,96 @@ var dithering = function (data, w) {
         data[i + 2 + w * 4 + 4] += 1 / 16 * err.b;
         data[i + 3 + w * 4 + 4] += 1 / 16 * err.a;
     }
+    return data;
 };
-var img = new Canvas.Image(), start = new Date();
-img.onerror = function (err) {
-    throw err;
+var start = new Date().getMilliseconds(), end = start;
+var data2TxPixelArr = (data, w, offsetX, offsetY) => {
+    var pixels = [];
+    for (var i = 0; i < data.length; i += 4) {
+        var c = {
+            r: data[i + 0],
+            g: data[i + 1],
+            b: data[i + 2],
+            a: data[i + 3],
+        };
+        pixels.push({
+            coordinate: pixel_1.toCoordinate(offsetX + i % w, offsetY + i / w),
+            colorIndex: eightBitColors_1.paletteIndex(c),
+            price: config_1.default.DEFAULT_PRICE,
+            priceCounter: 0
+        });
+    }
+    end = new Date().getMilliseconds();
+    console.log(`data2TxPixelArr耗时: ${end - start}ms`);
+    start = end;
+    return pixels;
 };
-img.onload = function () {
-    //    获取图片的width和height
-    var width = img.width, height = img.height, canvas = new Canvas(width, height), ctx = canvas.getContext('2d');
-    // 将源图片复制到画布上
-    // canvas 所有的操作都是在 context 上，所以要先将图片放到画布上才能操作
-    ctx.drawImage(img, 0, 0, width, height);
-    var imageData = ctx.getImageData(0, 0, width, height), data = imageData.data;
-    console.log("canvas img length : " + data.length);
-    dithering(data, width);
-    // 将修改后的代码复制回画布中
-    ctx.putImageData(imageData, 0, 0);
-    // 将修改后的图片保存
-    var out = fs_1.createWriteStream("./output.png"), stream = canvas.pngStream();
-    stream.on('data', function (chunk) {
-        out.write(chunk);
+var sendTx = (pixels, canvasId) => {
+    const transactionCount = Math.ceil(pixels.length / config_1.default.PIXELS_PER_TRANSACTION);
+    const txPixelArrays = [];
+    for (let i = 0; i < transactionCount; i++) {
+        const startIndex = i * config_1.default.PIXELS_PER_TRANSACTION;
+        txPixelArrays[i] = pixels.slice(startIndex, startIndex + config_1.default.PIXELS_PER_TRANSACTION);
+    }
+    let hadPainted = false;
+    try {
+        for (const txPixels of txPixelArrays) {
+            const batchSize = Math.ceil(txPixels.length / config_1.default.PIXELS_PER_ACTION);
+            const actionPixelArrays = [];
+            for (let i = 0; i < batchSize; i++) {
+                const startIndex = i * config_1.default.PIXELS_PER_ACTION;
+                actionPixelArrays[i] = txPixels.slice(startIndex, startIndex + config_1.default.PIXELS_PER_ACTION);
+            }
+            // await tokenContract.transaction((tr: any) => {
+            for (const pixels of actionPixelArrays) {
+                let price = 0;
+                const memos = [];
+                for (const draftPixel of pixels) {
+                    memos.push(packMemo_1.packMemo(draftPixel.coordinate, draftPixel.colorIndex, draftPixel.priceCounter));
+                    price += draftPixel.price;
+                }
+                // console.log("transfer " + price)
+            }
+            //     tr.transfer(
+            //       accountName,
+            //       config.EOS_CONTRACT_NAME,
+            //       `${normalizePrice(Number(price.toFixed(4)))} ${
+            //       config.EOS_CORE_SYMBOL
+            //       }`,
+            //       memos.join(','),
+            //     )
+            //   }
+            // })
+            hadPainted = true;
+        }
+    }
+    catch (e) {
+        console.log(e);
+    }
+    end = new Date().getMilliseconds();
+    console.log(`sendTx耗时: ${end - start}ms`);
+    start = end;
+};
+function DTH(picPath, canvasId, x, y) {
+    getPixels(picPath, function (err, pixels) {
+        if (err) {
+            console.log("Bad image path");
+            return;
+        }
+        console.log(pixels);
+        var data = pixels.data;
+        console.log(data.length);
+        var w = pixels.shape[0];
+        sendTx(data2TxPixelArr(dithering(data, w), w, x, y), canvasId);
     });
-    stream.on('end', function () {
-        console.log("\u4FDD\u5B58\u5230 ./output.png");
-        console.log("\u8017\u65F6: " + (new Date().getMilliseconds() - start.getMilliseconds()) + "ms");
-    });
-};
-function DTH(picPath, canvas, x, y) {
-    img.src = picPath;
-    var data = fs_1.readFileSync(picPath);
-    console.log("同步读取: " + data.length);
-    console.log(new Uint8Array(new Buffer(data)).length);
     console.log(picPath);
-    console.log(canvas);
+    console.log(canvasId);
     console.log(x);
     console.log(y);
 }
 exports.DTH = DTH;
 function DTH2(option) {
-    DTH(option.picPath, option.canvas, option.x, option.y);
+    DTH(option.picPath, option.canvasId, option.x, option.y);
 }
 exports.DTH2 = DTH2;
+//# sourceMappingURL=dth.js.map

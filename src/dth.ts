@@ -1,18 +1,16 @@
-import { readFileSync, createWriteStream } from 'fs'
-var Canvas = require('canvas');
-var images = require("images");
+var getPixels = require("get-pixels");
 import {
-  colorArr,
-  colorDistance,
-  Color,
-  toCoordinate
+  palette,
+  paletteIndex,
+  getColorError
 } from './eightBitColors'
+import {
+  toCoordinate,
+  IPixel
+} from './pixel'
 import { eos } from './eos'
 import config from './config'
-
-const { PIXELS_PER_ACTION, PIXELS_PER_TRANSACTION } = config
-const ROWS_LIMIT = 1000 * 1000
-const CONTRACT_NAME = config.EOS_CONTRACT_NAME
+import { packMemo, normalizePrice } from './packMemo'
 
 interface Option {
   picPath: string, // picture path, e.g. "./abc/abc/a.jpg"
@@ -21,34 +19,7 @@ interface Option {
   y: number,
 }
 
-export interface IPixel {
-  colorIndex: number // color index in colors from './eightBitColors.ts'
-  price: number
-  priceCounter: number
-}
-
-var palette = (color: Color): Color => {
-  var distanceArr = []
-  colorArr.forEach((c: Color) => {
-    distanceArr.push(colorDistance(color, c))
-  });
-
-  return colorArr[distanceArr.indexOf(Math.min(...distanceArr))]
-}
-
-var getError = (oldColor, newColor) => {
-  var oldColorAver = (oldColor.r + oldColor.g + oldColor.b / 3);
-  var newColorAver = (newColor.r + newColor.g + newColor.b / 3);
-  var err = oldColorAver - newColorAver;
-  return {
-    r: err,
-    g: err,
-    b: err,
-    a: 0xff,
-  };
-}
-
-var dithering = (data, w: number) => {
+var dithering = (data: Buffer, w: number) => {
   for (var i = 0; i < data.length; i += 4) {
     var oldColor = {
       r: data[i + 0],
@@ -63,7 +34,7 @@ var dithering = (data, w: number) => {
     data[i + 2] = newColor.b;
     data[i + 3] = newColor.a;
 
-    var err = getError(oldColor, newColor);
+    var err = getColorError(oldColor, newColor);
 
     data[i + 0 + 4] += 7 / 16 * err.r;
     data[i + 1 + 4] += 7 / 16 * err.g;
@@ -85,74 +56,110 @@ var dithering = (data, w: number) => {
     data[i + 2 + w * 4 + 4] += 1 / 16 * err.b;
     data[i + 3 + w * 4 + 4] += 1 / 16 * err.a;
   }
+
+  return data
 }
 
-let img = new Canvas.Image(), start = new Date()
+var start = new Date().getMilliseconds(), end = start
 
-img.onerror = (err) => {
-  throw err
-}
-
-img.onload = () => {
-  //    获取图片的width和height
-  let width = img.width
-    , height = img.height
-    , canvas = new Canvas(width, height)
-    , ctx = canvas.getContext('2d')
-
-  // 将源图片复制到画布上
-  // canvas 所有的操作都是在 context 上，所以要先将图片放到画布上才能操作
-  ctx.drawImage(img, 0, 0, width, height)
-
-  let imageData = ctx.getImageData(0, 0, width, height),
-    data = imageData.data
-
-  console.log("canvas img length : " + data.length)
-
-  dithering(data, width)
-
-  // 将修改后的代码复制回画布中
-  ctx.putImageData(imageData, 0, 0)
-
-  // 将修改后的图片保存
-  let out = createWriteStream("./output.png"),
-    stream = canvas.pngStream()
-
-  stream.on('data', function (chunk) {
-    out.write(chunk)
-  })
-
-  stream.on('end', function () {
-    console.log(`保存到 ./output.png`)
-    console.log(`耗时: ${new Date().getMilliseconds() - start.getMilliseconds()}ms`)
-  })
-}
-var data2TxPixelArr = (data: Uint8Array, w: number) => {
+var data2TxPixelArr = (data: Buffer, w: number, offsetX: number, offsetY: number): Array<IPixel> => {
   var pixels: Array<IPixel> = []
   for (var i = 0; i < data.length; i += 4) {
-    var oldColor = {
+    var c = {
       r: data[i + 0],
       g: data[i + 1],
       b: data[i + 2],
       a: data[i + 3],
     };
-    var newColor = palette(oldColor);
     pixels.push({
-      colorIndex: 2,
-      price: 2,
-      priceCounter:  2
+      coordinate: toCoordinate(offsetX + i % w, offsetY + i / w),
+      colorIndex: paletteIndex(c),
+      price: config.DEFAULT_PRICE,
+      priceCounter: 0
     })
   }
-}
-var sendTx = (pixels: Array<IPixel>, w: number, canvasId: number, x: number, y: number) => {
 
+  end = new Date().getMilliseconds()
+  console.log(`data2TxPixelArr耗时: ${end - start}ms`)
+  start = end
+
+  return pixels
 }
 
-export function DTH(picPath, canvasId, x, y) {
-  img.src = picPath
-  var data = readFileSync(picPath)
-  console.log("同步读取: " + data.length)
-  console.log(new Uint8Array(new Buffer(data)).length)
+var sendTx = (pixels: Array<IPixel>, canvasId: number) => {
+  const transactionCount = Math.ceil(
+    pixels.length / config.PIXELS_PER_TRANSACTION,
+  )
+  const txPixelArrays: Array<Array<IPixel>> = []
+  for (let i = 0; i < transactionCount; i++) {
+    const startIndex = i * config.PIXELS_PER_TRANSACTION
+    txPixelArrays[i] = pixels.slice(
+      startIndex,
+      startIndex + config.PIXELS_PER_TRANSACTION,
+    )
+  }
+
+  let hadPainted = false
+
+  try {
+    for (const txPixels of txPixelArrays) {
+      const batchSize = Math.ceil(txPixels.length / config.PIXELS_PER_ACTION)
+      const actionPixelArrays: Array<Array<IPixel>> = []
+
+      for (let i = 0; i < batchSize; i++) {
+        const startIndex = i * config.PIXELS_PER_ACTION
+        actionPixelArrays[i] = txPixels.slice(
+          startIndex,
+          startIndex + config.PIXELS_PER_ACTION,
+        )
+      }
+
+      // await tokenContract.transaction((tr: any) => {
+      for (const pixels of actionPixelArrays) {
+        let price = 0
+        const memos: string[] = []
+        for (const draftPixel of pixels) {
+          memos.push(
+            packMemo(draftPixel.coordinate, draftPixel.colorIndex, draftPixel.priceCounter),
+          )
+          price += draftPixel.price
+        }
+        // console.log("transfer " + price)
+      }
+
+      //     tr.transfer(
+      //       accountName,
+      //       config.EOS_CONTRACT_NAME,
+      //       `${normalizePrice(Number(price.toFixed(4)))} ${
+      //       config.EOS_CORE_SYMBOL
+      //       }`,
+      //       memos.join(','),
+      //     )
+      //   }
+      // })
+      hadPainted = true
+    }
+  } catch (e) {
+    console.log(e)
+  }
+
+  end = new Date().getMilliseconds()
+  console.log(`sendTx耗时: ${end - start}ms`)
+  start = end
+}
+
+export function DTH(picPath: string, canvasId: number, x: number, y: number) {
+  getPixels(picPath, function (err: any, pixels: any) {
+    if (err) {
+      console.log("Bad image path")
+      return
+    }
+    console.log(pixels)
+    var data = pixels.data
+    console.log(data.length)
+    var w = pixels.shape[0]
+    sendTx(data2TxPixelArr(dithering(data, w), w, x, y), canvasId)
+  })
   console.log(picPath)
   console.log(canvasId)
   console.log(x)

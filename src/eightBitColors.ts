@@ -267,8 +267,8 @@ export const colors = [
 export const BLANK_INDEX = 255
 export const BLACK_INDEX = 15
 
-export function hexToRgb(hex) {
-  var rgb = [];
+export function hexToRgb(hex: string) {
+  var rgb: Array<number> = [];
 
   hex = hex.substr(1);//去除前缀 # 号
 
@@ -276,7 +276,7 @@ export function hexToRgb(hex) {
     hex.replace(/(.)/g, '$1$1');
   }
 
-  hex.replace(/../g, (color) => {
+  hex.replace(/../g, (color: string): any => {
     rgb.push(parseInt(color, 0x10));//按16进制将字符串转换为数字
   });
 
@@ -288,8 +288,8 @@ export function hexToRgb(hex) {
   };
 };
 
-var getColors = () : Array<Color> => {
-  var colorArr = [];
+var getColors = (): Array<Color> => {
+  var colorArr: Array<Color> = [];
   colors.forEach(cStr => {
     colorArr.push(hexToRgb(cStr))
   });
@@ -308,7 +308,32 @@ export function colorDistance(rgb_1: Color, rgb_2: Color): number {
   )
 }
 
-export function toCoordinate(x: number, y: number): number {
-  // tslint:disable-next-line no-bitwise
-  return (y << 10) | x
+export function palette(color: Color): Color {
+  var distanceArr: Array<number> = []
+  colorArr.forEach((c: Color) => {
+    distanceArr.push(colorDistance(color, c))
+  });
+
+  return colorArr[distanceArr.indexOf(Math.min(...distanceArr))]
+}
+
+export function paletteIndex(color: Color): number {
+  var distanceArr: Array<number> = []
+  colorArr.forEach((c: Color) => {
+    distanceArr.push(colorDistance(color, c))
+  });
+
+  return distanceArr.indexOf(Math.min(...distanceArr))
+}
+
+export function getColorError(oldColor: Color, newColor: Color) {
+  var oldColorAver = (oldColor.r + oldColor.g + oldColor.b / 3);
+  var newColorAver = (newColor.r + newColor.g + newColor.b / 3);
+  var err = oldColorAver - newColorAver;
+  return {
+    r: err,
+    g: err,
+    b: err,
+    a: 0xff,
+  };
 }
