@@ -3,8 +3,10 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var getPixels = require("get-pixels");
 const eightBitColors_1 = require("./eightBitColors");
 const pixel_1 = require("./pixel");
+const eos_1 = require("./eos");
 const config_1 = require("./config");
 const packMemo_1 = require("./packMemo");
+var start = new Date().getMilliseconds(), end = start; //record time spent
 var dithering = (data, w) => {
     for (var i = 0; i < data.length; i += 4) {
         var oldColor = {
@@ -38,7 +40,6 @@ var dithering = (data, w) => {
     }
     return data;
 };
-var start = new Date().getMilliseconds(), end = start;
 var data2TxPixelArr = (data, w, offsetX, offsetY) => {
     var pixels = [];
     for (var i = 0; i < data.length; i += 4) {
@@ -56,9 +57,12 @@ var data2TxPixelArr = (data, w, offsetX, offsetY) => {
         });
     }
     end = new Date().getMilliseconds();
-    console.log(`data2TxPixelArr耗时: ${end - start}ms`);
+    console.log(`data2TxPixelArr 耗时: ${end - start} ms`);
     start = end;
     return pixels;
+};
+var data2Tx = (data, w, offsetX, offsetY) => {
+    return data2TxPixelArr(dithering(data, w), w, offsetX, offsetY);
 };
 var sendTx = (pixels, canvasId) => {
     const transactionCount = Math.ceil(pixels.length / config_1.default.PIXELS_PER_TRANSACTION);
@@ -76,7 +80,7 @@ var sendTx = (pixels, canvasId) => {
                 const startIndex = i * config_1.default.PIXELS_PER_ACTION;
                 actionPixelArrays[i] = txPixels.slice(startIndex, startIndex + config_1.default.PIXELS_PER_ACTION);
             }
-            // await tokenContract.transaction((tr: any) => {
+            // await eos.contract('eos.token').transaction((tr: any) => {
             for (const pixels of actionPixelArrays) {
                 let price = 0;
                 const memos = [];
@@ -84,39 +88,56 @@ var sendTx = (pixels, canvasId) => {
                     memos.push(packMemo_1.packMemo(draftPixel.coordinate, draftPixel.colorIndex, draftPixel.priceCounter));
                     price += draftPixel.price;
                 }
-                // console.log("transfer " + price)
+                console.log("transfer " + price);
+                eos_1.eos.contract('eosio.token').then((token) => {
+                    token.transfer('tester', config_1.default.EOS_CONTRACT_NAME, `${packMemo_1.normalizePrice(Number(price.toFixed(4)))} ${config_1.default.EOS_CORE_SYMBOL}`, memos.join(','));
+                }, eos_1.options);
+                // eos.contract('eosio.token').transaction((tr: any) => {
+                //   tr.newaccount({
+                //     creator: 'eosio',
+                //     name: 'newaccount',
+                //     owner: pubkey,
+                //     active: pubkey
+                //   })
+                //   console.log("newaccount")
+                //   tr.transfer(
+                //     'newaccount',
+                //     config.EOS_CONTRACT_NAME,
+                //     `${normalizePrice(Number(price.toFixed(4)))} ${
+                //     config.EOS_CORE_SYMBOL
+                //     }`,
+                //     memos.join(','),
+                //     options
+                //   )
+                //   console.log("transfer " + price)
+                // })
+                // break;
             }
-            //     tr.transfer(
-            //       accountName,
-            //       config.EOS_CONTRACT_NAME,
-            //       `${normalizePrice(Number(price.toFixed(4)))} ${
-            //       config.EOS_CORE_SYMBOL
-            //       }`,
-            //       memos.join(','),
-            //     )
-            //   }
+            // break;
             // })
-            hadPainted = true;
+            // hadPainted = true
         }
     }
     catch (e) {
         console.log(e);
     }
     end = new Date().getMilliseconds();
-    console.log(`sendTx耗时: ${end - start}ms`);
+    console.log(`sendTx 耗时: ${end - start} ms`);
     start = end;
 };
 function DTH(picPath, canvasId, x, y) {
-    getPixels(picPath, function (err, pixels) {
+    getPixels(picPath, (err, pixels) => {
         if (err) {
             console.log("Bad image path");
             return;
         }
-        console.log(pixels);
         var data = pixels.data;
-        console.log(data.length);
         var w = pixels.shape[0];
-        sendTx(data2TxPixelArr(dithering(data, w), w, x, y), canvasId);
+        sendTx(data2Tx(data, w, x, y), canvasId);
+        console.log(pixels);
+        console.log(data.length);
+        var info = eos_1.eos.getInfo({});
+        console.log(info);
     });
     console.log(picPath);
     console.log(canvasId);

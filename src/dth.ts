@@ -8,7 +8,7 @@ import {
   toCoordinate,
   IPixel
 } from './pixel'
-import { eos } from './eos'
+import { eos, options } from './eos'
 import config from './config'
 import { packMemo, normalizePrice } from './packMemo'
 
@@ -72,7 +72,7 @@ var data2TxPixelArr = (data: Buffer, w: number, offsetX: number, offsetY: number
       a: data[i + 3],
     };
     pixels.push({
-      coordinate: toCoordinate(offsetX + i % w, offsetY + i / w),
+      coordinate: toCoordinate(offsetX + i % w, offsetY + Math.floor(i / w)),
       colorIndex: paletteIndex(c),
       price: config.DEFAULT_PRICE,
       priceCounter: 0
@@ -118,7 +118,7 @@ var sendTx = (pixels: Array<IPixel>, canvasId: string) => {
         )
       }
 
-      // await tokenContract.transaction((tr: any) => {
+      // await eos.contract('eos.token').transaction((tr: any) => {
       for (const pixels of actionPixelArrays) {
         let price = 0
         const memos: string[] = []
@@ -128,20 +128,44 @@ var sendTx = (pixels: Array<IPixel>, canvasId: string) => {
           )
           price += draftPixel.price
         }
-        // console.log("transfer " + price)
-      }
+        console.log("transfer " + price)
 
-      //     tr.transfer(
-      //       accountName,
-      //       config.EOS_CONTRACT_NAME,
-      //       `${normalizePrice(Number(price.toFixed(4)))} ${
-      //       config.EOS_CORE_SYMBOL
-      //       }`,
-      //       memos.join(','),
-      //     )
-      //   }
+        eos.contract('eosio.token').then((contract: any) => {
+          contract.transfer(
+            'tester',
+            config.EOS_CONTRACT_NAME,
+            `${normalizePrice(Number(price.toFixed(4)))} ${
+            config.EOS_CORE_SYMBOL
+            }`,
+            memos.join(',')
+          )
+        }, options)
+        // eos.contract('eosio.token').transaction((tr: any) => {
+        //   tr.newaccount({
+        //     creator: 'eosio',
+        //     name: 'newaccount',
+        //     owner: pubkey,
+        //     active: pubkey
+        //   })
+        //   console.log("newaccount")
+
+        //   tr.transfer(
+        //     'newaccount',
+        //     config.EOS_CONTRACT_NAME,
+        //     `${normalizePrice(Number(price.toFixed(4)))} ${
+        //     config.EOS_CORE_SYMBOL
+        //     }`,
+        //     memos.join(','),
+        //     options
+        //   )
+        //   console.log("transfer " + price)
+        // })
+
+        // break;
+      }
+      // break;
       // })
-      hadPainted = true
+      // hadPainted = true
     }
   } catch (e) {
     console.log(e)
@@ -164,6 +188,12 @@ export function DTH(picPath: string, canvasId: string, x: number, y: number) {
 
     console.log(pixels)
     console.log(data.length)
+
+
+    var info = eos.getInfo({})
+    console.log(info)
+
+
   })
   console.log(picPath)
   console.log(canvasId)
