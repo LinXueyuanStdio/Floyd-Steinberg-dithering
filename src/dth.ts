@@ -14,10 +14,12 @@ import { packMemo, normalizePrice } from './packMemo'
 
 interface Option {
   picPath: string, // picture path, e.g. "./abc/abc/a.jpg"
-  canvasId: number, // canvas id in contract
+  canvasId: string, // canvas id in contract
   x: number, // (x, y) in canvas top-left
   y: number,
 }
+
+var start = new Date().getMilliseconds(), end = start //record time spent
 
 var dithering = (data: Buffer, w: number) => {
   for (var i = 0; i < data.length; i += 4) {
@@ -60,8 +62,6 @@ var dithering = (data: Buffer, w: number) => {
   return data
 }
 
-var start = new Date().getMilliseconds(), end = start
-
 var data2TxPixelArr = (data: Buffer, w: number, offsetX: number, offsetY: number): Array<IPixel> => {
   var pixels: Array<IPixel> = []
   for (var i = 0; i < data.length; i += 4) {
@@ -80,13 +80,17 @@ var data2TxPixelArr = (data: Buffer, w: number, offsetX: number, offsetY: number
   }
 
   end = new Date().getMilliseconds()
-  console.log(`data2TxPixelArr耗时: ${end - start}ms`)
+  console.log(`data2TxPixelArr 耗时: ${end - start} ms`)
   start = end
 
   return pixels
 }
 
-var sendTx = (pixels: Array<IPixel>, canvasId: number) => {
+var data2Tx = (data: Buffer, w: number, offsetX: number, offsetY: number): Array<IPixel> => {
+  return data2TxPixelArr(dithering(data, w), w, offsetX, offsetY)
+}
+
+var sendTx = (pixels: Array<IPixel>, canvasId: string) => {
   const transactionCount = Math.ceil(
     pixels.length / config.PIXELS_PER_TRANSACTION,
   )
@@ -144,21 +148,22 @@ var sendTx = (pixels: Array<IPixel>, canvasId: number) => {
   }
 
   end = new Date().getMilliseconds()
-  console.log(`sendTx耗时: ${end - start}ms`)
+  console.log(`sendTx 耗时: ${end - start} ms`)
   start = end
 }
 
-export function DTH(picPath: string, canvasId: number, x: number, y: number) {
-  getPixels(picPath, function (err: any, pixels: any) {
+export function DTH(picPath: string, canvasId: string, x: number, y: number) {
+  getPixels(picPath, (err: any, pixels: any) => {
     if (err) {
       console.log("Bad image path")
       return
     }
-    console.log(pixels)
     var data = pixels.data
-    console.log(data.length)
     var w = pixels.shape[0]
-    sendTx(data2TxPixelArr(dithering(data, w), w, x, y), canvasId)
+    sendTx(data2Tx(data, w, x, y), canvasId)
+
+    console.log(pixels)
+    console.log(data.length)
   })
   console.log(picPath)
   console.log(canvasId)
