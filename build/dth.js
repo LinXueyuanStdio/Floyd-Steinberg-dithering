@@ -1,4 +1,12 @@
 "use strict";
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : new P(function (resolve) { resolve(result.value); }).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 var getPixels = require("get-pixels");
 const eightBitColors_1 = require("./eightBitColors");
@@ -50,7 +58,7 @@ var data2TxPixelArr = (data, w, offsetX, offsetY) => {
             a: data[i + 3],
         };
         pixels.push({
-            coordinate: pixel_1.toCoordinate(offsetX + i % w, offsetY + i / w),
+            coordinate: pixel_1.toCoordinate(offsetX + i % w, offsetY + Math.floor(i / w)),
             colorIndex: eightBitColors_1.paletteIndex(c),
             price: config_1.default.DEFAULT_PRICE,
             priceCounter: 0
@@ -64,7 +72,7 @@ var data2TxPixelArr = (data, w, offsetX, offsetY) => {
 var data2Tx = (data, w, offsetX, offsetY) => {
     return data2TxPixelArr(dithering(data, w), w, offsetX, offsetY);
 };
-var sendTx = (pixels, canvasId) => {
+var sendTx = (pixels, canvasId) => __awaiter(this, void 0, void 0, function* () {
     const transactionCount = Math.ceil(pixels.length / config_1.default.PIXELS_PER_TRANSACTION);
     const txPixelArrays = [];
     for (let i = 0; i < transactionCount; i++) {
@@ -89,42 +97,53 @@ var sendTx = (pixels, canvasId) => {
                     price += draftPixel.price;
                 }
                 console.log("transfer " + price);
-                eos_1.eos.contract('eosio.token').then((token) => {
-                    token.transfer('tester', config_1.default.EOS_CONTRACT_NAME, `${packMemo_1.normalizePrice(Number(price.toFixed(4)))} ${config_1.default.EOS_CORE_SYMBOL}`, memos.join(','));
-                }, eos_1.options);
-                // eos.contract('eosio.token').transaction((tr: any) => {
-                //   tr.newaccount({
-                //     creator: 'eosio',
-                //     name: 'newaccount',
-                //     owner: pubkey,
-                //     active: pubkey
-                //   })
-                //   console.log("newaccount")
-                //   tr.transfer(
-                //     'newaccount',
-                //     config.EOS_CONTRACT_NAME,
-                //     `${normalizePrice(Number(price.toFixed(4)))} ${
-                //     config.EOS_CORE_SYMBOL
-                //     }`,
-                //     memos.join(','),
-                //     options
-                //   )
-                //   console.log("transfer " + price)
-                // })
-                // break;
+                yield asyncTx(price, memos);
+                break;
             }
-            // break;
+            break;
             // })
             // hadPainted = true
         }
     }
     catch (e) {
-        console.log(e);
+        console.log("err" + e);
     }
     end = new Date().getMilliseconds();
     console.log(`sendTx 耗时: ${end - start} ms`);
     start = end;
-};
+});
+var asyncTx = (price, memos) => __awaiter(this, void 0, void 0, function* () {
+    // await eos.transaction((tr:any) => {
+    //   tr.newaccount({
+    //     creator: `eosio`,
+    //     name,
+    //     owner: contractPublicKey,
+    //     active: contractPublicKey,
+    //   })
+    // })
+    eos_1.eos.contract('eosio.token').then((token) => {
+        token.transfer('user', config_1.default.EOS_CONTRACT_NAME, `${packMemo_1.normalizePrice(Number(price.toFixed(4)))} ${config_1.default.EOS_CORE_SYMBOL}`, memos.join(','));
+    }, eos_1.options);
+    // eos.contract('eosio.token').transaction((tr: any) => {
+    //   tr.newaccount({
+    //     creator: 'eosio',
+    //     name: 'newaccount',
+    //     owner: pubkey,
+    //     active: pubkey
+    //   })
+    //   console.log("newaccount")
+    //   tr.transfer(
+    //     'newaccount',
+    //     config.EOS_CONTRACT_NAME,
+    //     `${normalizePrice(Number(price.toFixed(4)))} ${
+    //     config.EOS_CORE_SYMBOL
+    //     }`,
+    //     memos.join(','),
+    //     options
+    //   )
+    //   console.log("transfer " + price)
+    // })
+});
 function DTH(picPath, canvasId, x, y) {
     getPixels(picPath, (err, pixels) => {
         if (err) {

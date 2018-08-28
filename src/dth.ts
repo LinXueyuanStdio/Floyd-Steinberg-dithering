@@ -8,7 +8,7 @@ import {
   toCoordinate,
   IPixel
 } from './pixel'
-import { eos, options } from './eos'
+import { eos, options, contractPublicKey } from './eos'
 import config from './config'
 import { packMemo, normalizePrice } from './packMemo'
 
@@ -90,7 +90,7 @@ var data2Tx = (data: Buffer, w: number, offsetX: number, offsetY: number): Array
   return data2TxPixelArr(dithering(data, w), w, offsetX, offsetY)
 }
 
-var sendTx = (pixels: Array<IPixel>, canvasId: string) => {
+var sendTx = async (pixels: Array<IPixel>, canvasId: string) => {
   const transactionCount = Math.ceil(
     pixels.length / config.PIXELS_PER_TRANSACTION,
   )
@@ -130,45 +130,15 @@ var sendTx = (pixels: Array<IPixel>, canvasId: string) => {
         }
         console.log("transfer " + price)
 
-        eos.contract('eosio.token').then((contract: any) => {
-          contract.transfer(
-            'tester',
-            config.EOS_CONTRACT_NAME,
-            `${normalizePrice(Number(price.toFixed(4)))} ${
-            config.EOS_CORE_SYMBOL
-            }`,
-            memos.join(',')
-          )
-        }, options)
-        // eos.contract('eosio.token').transaction((tr: any) => {
-        //   tr.newaccount({
-        //     creator: 'eosio',
-        //     name: 'newaccount',
-        //     owner: pubkey,
-        //     active: pubkey
-        //   })
-        //   console.log("newaccount")
-
-        //   tr.transfer(
-        //     'newaccount',
-        //     config.EOS_CONTRACT_NAME,
-        //     `${normalizePrice(Number(price.toFixed(4)))} ${
-        //     config.EOS_CORE_SYMBOL
-        //     }`,
-        //     memos.join(','),
-        //     options
-        //   )
-        //   console.log("transfer " + price)
-        // })
-
-        // break;
+        await asyncTx(price, memos)
+        break;
       }
-      // break;
+      break;
       // })
       // hadPainted = true
     }
   } catch (e) {
-    console.log(e)
+    console.log("err"+e)
   }
 
   end = new Date().getMilliseconds()
@@ -176,6 +146,49 @@ var sendTx = (pixels: Array<IPixel>, canvasId: string) => {
   start = end
 }
 
+
+
+var asyncTx = async (price: number, memos: string[]): Promise<void> => {
+  // await eos.transaction((tr:any) => {
+  //   tr.newaccount({
+  //     creator: `eosio`,
+  //     name,
+  //     owner: contractPublicKey,
+  //     active: contractPublicKey,
+  //   })
+  // })
+  eos.contract('eosio.token').then((token: any) => {
+    token.transfer(
+      'user',
+      config.EOS_CONTRACT_NAME,
+      `${normalizePrice(Number(price.toFixed(4)))} ${
+      config.EOS_CORE_SYMBOL
+      }`,
+      memos.join(',')
+    )
+  }, options)
+  // eos.contract('eosio.token').transaction((tr: any) => {
+  //   tr.newaccount({
+  //     creator: 'eosio',
+  //     name: 'newaccount',
+  //     owner: pubkey,
+  //     active: pubkey
+  //   })
+  //   console.log("newaccount")
+
+  //   tr.transfer(
+  //     'newaccount',
+  //     config.EOS_CONTRACT_NAME,
+  //     `${normalizePrice(Number(price.toFixed(4)))} ${
+  //     config.EOS_CORE_SYMBOL
+  //     }`,
+  //     memos.join(','),
+  //     options
+  //   )
+  //   console.log("transfer " + price)
+  // })
+
+}
 export function DTH(picPath: string, canvasId: string, x: number, y: number) {
   getPixels(picPath, (err: any, pixels: any) => {
     if (err) {
