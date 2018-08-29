@@ -36,7 +36,7 @@ interface IDrawTX {
   price: number,
   memo: string,
 }
-
+let aa = 0;
 export async function DTH(picPath: string, canvasId: string, x: number, y: number) {
   let img = await Image.fromFile(picPath)
   img.dithering()
@@ -82,8 +82,8 @@ class Image {
 
   getPointAtIndex(i: number): IPoint {
     return {
-      x: i % this.width,
-      y: Math.floor(i / this.width),
+      x: (i / 4) % this.width,
+      y: Math.floor((i / 4) / this.width),
     }
   }
 
@@ -114,11 +114,15 @@ class Image {
 
   getPixelAtIndex(i: number, offset?: IPoint): IPixel {
     const { color, point } = this.getDraftPixelAtIndex(i)
-
+    
     const colorIndex = this.getIndexFromColor(color)
-
+    
     const offsetPoint = this.appendOffset(point, offset)
     const coordinate = this.getCoordinate(offsetPoint)
+    if (aa >= 140 && aa < 150) {
+      console.log(point , offsetPoint, coordinate)
+    }
+    aa++
 
     const price = this.getPriceAtIndex(i)
 
@@ -136,6 +140,12 @@ class Image {
       const pixel = this.getPixelAtIndex(i, offset)
       pixels.push(pixel)
     }
+    // console.log(pixels[0])
+    // console.log(pixels[1])
+    // console.log(pixels[2])
+    // console.log(pixels[3])
+    // console.log(pixels[4])
+
 
     return pixels
   }
@@ -172,17 +182,25 @@ class Image {
 
       const err = getColorError(oldColor, newColor);
 
-      const rigthIdx = this.getRigthIndex(i)
-      this.appendErrAtIndex(rigthIdx, 7 / 16, err)
+      const height = (this.data.length / 4) / this.width
+      const iHeight = (i / 4) / this.width + 1
+      if (!((i / 4) % this.width == this.width - 1)) {
+        const rigthIdx = this.getRigthIndex(i)
+        this.appendErrAtIndex(rigthIdx, 7 / 16, err)
+      }
+      if (iHeight != height && !((i / 4) % this.width == this.width - 1)) {
+        const bottomRigthIdx = this.getBottomRigthIndex(i)
+        this.appendErrAtIndex(bottomRigthIdx, 3 / 16, err)
+      }
+      if (iHeight != height) {
+        const bottomIdx = this.getBottomIndex(i)
+        this.appendErrAtIndex(bottomIdx, 5 / 16, err)
+      }
+      if (iHeight != height && !((i / 4) % this.width == 0)) {
 
-      const bottomRigthIdx = this.getBottomRigthIndex(i)
-      this.appendErrAtIndex(bottomRigthIdx, 3 / 16, err)
-
-      const bottomIdx = this.getBottomIndex(i)
-      this.appendErrAtIndex(bottomIdx, 5 / 16, err)
-
-      const bottomLeftIdx = this.getBottomLeftIndex(i)
-      this.appendErrAtIndex(bottomLeftIdx, 1 / 16, err)
+        const bottomLeftIdx = this.getBottomLeftIndex(i)
+        this.appendErrAtIndex(bottomLeftIdx, 1 / 16, err)
+      }
     }
   }
 }
@@ -255,18 +273,20 @@ class ImageContract {
   }
 
   public async sendDrawTx(tx: IDrawTX) {
-    const token = await this.tokenContract()
-
     const assetQuantity = normalizePrice(Number(tx.price.toFixed(4)))
     const asset = `${assetQuantity} ${config.EOS_CORE_SYMBOL}`
 
+    const t = {
+      from: tx.user,
+      to: config.EOS_CONTRACT_NAME,
+      quantity: asset,
+      memo: tx.memo,
+      // quantity:'0.2000 EOS',
+      // memo: '6a6ctjbjsz,6a6eskfls3,6a6grljnr7,6a6iqmnpqb,574l9tc745,58oppgodtx,5a8u540kjp,5bsykrcr9h',
+    }
+    console.log(t)
     eos.transaction((tr: any) => {
-      tr.transfer({
-        from: tx.user,
-        to: config.EOS_CONTRACT_NAME,
-        quantity: asset,
-        memo: tx.memo,
-      })
+      tr.transfer(t)
     }, options)
     // token.then((t: any) => {
     //   t.transfer({
@@ -279,19 +299,23 @@ class ImageContract {
   }
 
   public async sendDrawTxs(txs: IDrawTX[]) {
-    // txs.forEach(tx => {
-    //   try {
-    //     this.sendDrawTx(tx)
-    //   } catch (e) {
-    //     console.log(e)
-    //   }
-    // })
+    txs.forEach(tx => {
+      try {
+        this.sendDrawTx(tx)
+      } catch (e) {
+        console.log(e)
+      }
+    })
 
-    try {
-      this.sendDrawTx(txs[0])
-    } catch (e) {
-      console.log(e)
-    }
+    // try {
+    //   this.sendDrawTx(txs[0])
+    //   this.sendDrawTx(txs[1])
+    //   this.sendDrawTx(txs[2])
+    //   this.sendDrawTx(txs[3])
+    //   this.sendDrawTx(txs[4])
+    // } catch (e) {
+    //   console.log(e)
+    // }
   }
 
   public async sendToContract() {

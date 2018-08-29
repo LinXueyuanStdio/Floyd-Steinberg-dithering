@@ -16,6 +16,7 @@ export const network = {
   port, // ( or null if defaulting to 80 )
   chainId,
 }
+// PW5HqeV7ZLUgC1WHng5nqGy646Z27wBxfJ9irLGjzQUMx1ZVFaa3U
 var newPrivateKey = '5HqgULjvoQANhzVHD7JQZCaMrgidqU9WCCFWMaKoQQrr3hUTXie'
 var newPublicKey = 'EOS7xTkL5AVimqcPhUdgyQ4VeYwHEDK3mr1FtvGqGVT69VBzP87mn'
 

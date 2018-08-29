@@ -1,8 +1,19 @@
 var bigInt = require('big-integer')
 
-export function packMemo(coordinate: number, color: number, priceCounter: number): string {
-  // tslint:disable-next-line no-bitwise
-  return bigInt(coordinate).shiftLeft(28).or(color << 20).or(priceCounter).toString()
+// export function packMemo(coordinate: number, color: number, priceCounter: number): string {
+//   // tslint:disable-next-line no-bitwise
+//   return bigInt(coordinate).shiftLeft(28).or(color << 20).or(priceCounter).toString()
+// }
+export function packMemo(
+  coordinate: number,
+  color: number,
+  priceCounter: number,
+): string {
+  return bigInt(priceCounter)
+    .shiftLeft(52)
+    .or(bigInt(coordinate).shiftLeft(32))
+    .or(color)
+    .toString(36)
 }
 
 export function normalizePrice(price: number): string {

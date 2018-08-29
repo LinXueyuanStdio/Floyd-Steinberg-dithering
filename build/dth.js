@@ -14,6 +14,7 @@ const pixel_1 = require("./pixel");
 const eos_1 = require("./eos");
 const config_1 = require("./config");
 const packMemo_1 = require("./packMemo");
+let aa = 0;
 function DTH(picPath, canvasId, x, y) {
     return __awaiter(this, void 0, void 0, function* () {
         let img = yield Image.fromFile(picPath);
@@ -62,8 +63,8 @@ class Image {
     }
     getPointAtIndex(i) {
         return {
-            x: i % this.width,
-            y: Math.floor(i / this.width),
+            x: (i / 4) % this.width,
+            y: Math.floor((i / 4) / this.width),
         };
     }
     appendOffset(point, offset) {
@@ -91,6 +92,10 @@ class Image {
         const colorIndex = this.getIndexFromColor(color);
         const offsetPoint = this.appendOffset(point, offset);
         const coordinate = this.getCoordinate(offsetPoint);
+        if (aa >= 140 && aa < 150) {
+            console.log(point, offsetPoint, coordinate);
+        }
+        aa++;
         const price = this.getPriceAtIndex(i);
         return {
             coordinate: coordinate,
@@ -105,6 +110,11 @@ class Image {
             const pixel = this.getPixelAtIndex(i, offset);
             pixels.push(pixel);
         }
+        // console.log(pixels[0])
+        // console.log(pixels[1])
+        // console.log(pixels[2])
+        // console.log(pixels[3])
+        // console.log(pixels[4])
         return pixels;
     }
     setColorAtIndex(i, newColor) {
@@ -130,14 +140,24 @@ class Image {
             const newColor = this.generateNewColor(oldColor);
             this.setColorAtIndex(i, newColor);
             const err = eightBitColors_1.getColorError(oldColor, newColor);
-            const rigthIdx = this.getRigthIndex(i);
-            this.appendErrAtIndex(rigthIdx, 7 / 16, err);
-            const bottomRigthIdx = this.getBottomRigthIndex(i);
-            this.appendErrAtIndex(bottomRigthIdx, 3 / 16, err);
-            const bottomIdx = this.getBottomIndex(i);
-            this.appendErrAtIndex(bottomIdx, 5 / 16, err);
-            const bottomLeftIdx = this.getBottomLeftIndex(i);
-            this.appendErrAtIndex(bottomLeftIdx, 1 / 16, err);
+            const height = (this.data.length / 4) / this.width;
+            const iHeight = (i / 4) / this.width + 1;
+            if (!((i / 4) % this.width == this.width - 1)) {
+                const rigthIdx = this.getRigthIndex(i);
+                this.appendErrAtIndex(rigthIdx, 7 / 16, err);
+            }
+            if (iHeight != height && !((i / 4) % this.width == this.width - 1)) {
+                const bottomRigthIdx = this.getBottomRigthIndex(i);
+                this.appendErrAtIndex(bottomRigthIdx, 3 / 16, err);
+            }
+            if (iHeight != height) {
+                const bottomIdx = this.getBottomIndex(i);
+                this.appendErrAtIndex(bottomIdx, 5 / 16, err);
+            }
+            if (iHeight != height && !((i / 4) % this.width == 0)) {
+                const bottomLeftIdx = this.getBottomLeftIndex(i);
+                this.appendErrAtIndex(bottomLeftIdx, 1 / 16, err);
+            }
         }
     }
 }
@@ -200,16 +220,17 @@ class ImageContract {
     }
     sendDrawTx(tx) {
         return __awaiter(this, void 0, void 0, function* () {
-            const token = yield this.tokenContract();
             const assetQuantity = packMemo_1.normalizePrice(Number(tx.price.toFixed(4)));
             const asset = `${assetQuantity} ${config_1.default.EOS_CORE_SYMBOL}`;
+            const t = {
+                from: tx.user,
+                to: config_1.default.EOS_CONTRACT_NAME,
+                quantity: asset,
+                memo: tx.memo,
+            };
+            console.log(t);
             eos_1.eos.transaction((tr) => {
-                tr.transfer({
-                    from: tx.user,
-                    to: config_1.default.EOS_CONTRACT_NAME,
-                    quantity: asset,
-                    memo: tx.memo,
-                });
+                tr.transfer(t);
             }, eos_1.options);
             // token.then((t: any) => {
             //   t.transfer({
@@ -232,6 +253,10 @@ class ImageContract {
             // })
             try {
                 this.sendDrawTx(txs[0]);
+                this.sendDrawTx(txs[1]);
+                this.sendDrawTx(txs[2]);
+                this.sendDrawTx(txs[3]);
+                this.sendDrawTx(txs[4]);
             }
             catch (e) {
                 console.log(e);
