@@ -206,6 +206,7 @@ class ImageContract {
             const assetQuantity = packMemo_1.normalizePrice(Number(tx.price.toFixed(4)));
             const asset = `${assetQuantity} ${config_1.default.EOS_CORE_SYMBOL}`;
             token.then((t) => {
+                console.log("what?");
                 t.transfer(tx.user, config_1.default.EOS_CONTRACT_NAME, asset, tx.memo);
             }, eos_1.options);
         });

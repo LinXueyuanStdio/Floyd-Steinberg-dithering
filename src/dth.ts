@@ -44,23 +44,25 @@ export async function DTH(picPath: string, canvasId: string, x: number, y: numbe
   imgContract.sendToContract()
 }
 
-async function readImage(path: string): Promise<any> {
-  return new Promise((resolve: any, reject: any) => {
-    getPixels(path, (err: any, pixels: any) => {
-      if (err) {
-        reject(err)
-        return
-      }
-      resolve(pixels)
-    })
-  })
-}
+
 
 class Image {
   constructor(public data: Buffer, public width: number) { }
+  
+  public static async readImage(path: string): Promise<any> {
+    return new Promise((resolve: any, reject: any) => {
+      getPixels(path, (err: any, pixels: any) => {
+        if (err) {
+          reject(err)
+          return
+        }
+        resolve(pixels)
+      })
+    })
+  }
 
   public static async fromFile(path: string): Promise<Image> {
-    const pixels = await readImage(path)
+    const pixels = await this.readImage(path)
     const data = pixels.data
     const width = pixels.shape[0]
 
@@ -75,15 +77,18 @@ class Image {
       a: this.data[i + 3],
     };
   }
+
   getIndexFromColor(color: Color) {
     return paletteIndex(color)
   }
+
   getPointAtIndex(i: number): IPoint {
     return {
       x: i % this.width,
       y: Math.floor(i / this.width),
     }
   }
+
   appendOffset(point: IPoint, offset?: IPoint): IPoint {
     const offsetX = (offset && offset.x) || 0
     const offsetY = (offset && offset.y) || 0
@@ -92,20 +97,23 @@ class Image {
       x: point.x + offsetX,
       y: point.y + offsetY,
     }
-
   }
+
   getCoordinate(point: IPoint): number {
     return toCoordinate(point.x, point.y)
   }
+
   getPriceAtIndex(i: number): number {
     return config.DEFAULT_PRICE
   }
+
   getDraftPixelAtIndex(i: number): IDraftPixel {
     return {
       color: this.getColorAtIndex(i),
       point: this.getPointAtIndex(i),
     }
   }
+
   getPixelAtIndex(i: number, offset?: IPoint): IPixel {
     const { color, point } = this.getDraftPixelAtIndex(i)
 
@@ -123,6 +131,7 @@ class Image {
       priceCounter: 0
     }
   }
+
   getPixels(offset?: IPoint): Array<IPixel> {
     var pixels: Array<IPixel> = []
     for (var i = 0; i < this.data.length; i += 4) {
@@ -141,17 +150,22 @@ class Image {
   }
 
   getRigthIndex(i: number) { return i + 4 }
+
   getBottomRigthIndex(i: number) { return i + this.width * 4 + 4 }
+
   getBottomIndex(i: number) { return i + this.width * 4 }
+
   getBottomLeftIndex(i: number) { return i + this.width * 4 - 4 }
 
   generateNewColor(oldColor: Color) { return palette(oldColor) }
+
   appendErrAtIndex(i: number, percent: number, err: Color) {
     this.data[i + 0] += percent * err.r;
     this.data[i + 1] += percent * err.g;
     this.data[i + 2] += percent * err.b;
     this.data[i + 3] += percent * err.a;
   }
+
   dithering() {
     for (var i = 0; i < this.data.length; i += 4) {
       const oldColor = this.getColorAtIndex(i)
@@ -196,6 +210,7 @@ class ImageContract {
 
     return memos.join(",")
   }
+
   getPrice(pixels: IPixel[]): number {
     let price: number = 0
     for (const draftPixel of pixels) {
@@ -250,7 +265,6 @@ class ImageContract {
     const asset = `${assetQuantity} ${config.EOS_CORE_SYMBOL}`
 
     token.then((t: any) => {
-      console.log("what?")
       t.transfer(
         tx.user,
         config.EOS_CONTRACT_NAME,
