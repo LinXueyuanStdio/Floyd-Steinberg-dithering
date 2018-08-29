@@ -250,6 +250,7 @@ class ImageContract {
     const asset = `${assetQuantity} ${config.EOS_CORE_SYMBOL}`
 
     token.then((t: any) => {
+      console.log("what?")
       t.transfer(
         tx.user,
         config.EOS_CONTRACT_NAME,
