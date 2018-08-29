@@ -37,6 +37,25 @@ interface IDrawTX {
   memo: string,
 }
 
+export async function DTH(picPath: string, canvasId: string, x: number, y: number) {
+  let img = await Image.fromFile(picPath)
+  img.dithering()
+  let imgContract = new ImageContract(img, {x,y}, canvasId)
+  imgContract.sendToContract()
+}
+
+async function readImage(path: string): Promise<any> {
+  return new Promise((resolve: any, reject: any) => {
+    getPixels(path, (err: any, pixels: any) => {
+      if (err) {
+        reject(err)
+        return
+      }
+      resolve(pixels)
+    })
+  })
+}
+
 class Image {
   constructor(public data: Buffer, public width: number) { }
 
@@ -156,8 +175,6 @@ class Image {
   }
 }
 
-
-
 class ImageContract {
   constructor(public image: Image, public offset: IPoint, public canvasId: string) { }
 
@@ -253,24 +270,4 @@ class ImageContract {
     const txs: IDrawTX[] = this.createTransferTransactions(pixels)
     await this.sendDrawTxs(txs)
   }
-}
-
-
-async function readImage(path: string): Promise<any> {
-  return new Promise((resolve: any, reject: any) => {
-    getPixels(path, (err: any, pixels: any) => {
-      if (err) {
-        reject(err)
-        return
-      }
-      resolve(pixels)
-    })
-  })
-}
-
-export async function DTH(picPath: string, canvasId: string, x: number, y: number) {
-  let img = await Image.fromFile(picPath)
-  img.dithering()
-  let imgContract = new ImageContract(img, {x,y}, canvasId)
-  imgContract.sendToContract()
 }
