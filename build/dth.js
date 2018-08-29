@@ -163,7 +163,7 @@ class ImageContract {
     getPrice(pixels) {
         let price = 0;
         for (const draftPixel of pixels) {
-            price += draftPixel.priceCounter;
+            price += draftPixel.price;
         }
         return price;
     }
@@ -203,21 +203,39 @@ class ImageContract {
             const token = yield this.tokenContract();
             const assetQuantity = packMemo_1.normalizePrice(Number(tx.price.toFixed(4)));
             const asset = `${assetQuantity} ${config_1.default.EOS_CORE_SYMBOL}`;
-            token.then((t) => {
-                t.transfer(tx.user, config_1.default.EOS_CONTRACT_NAME, asset, tx.memo);
+            eos_1.eos.transaction((tr) => {
+                tr.transfer({
+                    from: tx.user,
+                    to: config_1.default.EOS_CONTRACT_NAME,
+                    quantity: asset,
+                    memo: tx.memo,
+                });
             }, eos_1.options);
+            // token.then((t: any) => {
+            //   t.transfer({
+            //     from: tx.user,
+            //     to: config.EOS_CONTRACT_NAME,
+            //     quantity: asset,
+            //     memo: tx.memo,
+            //   })
+            // }, options)
         });
     }
     sendDrawTxs(txs) {
         return __awaiter(this, void 0, void 0, function* () {
-            txs.forEach(tx => {
-                try {
-                    this.sendDrawTx(tx);
-                }
-                catch (e) {
-                    console.log(e);
-                }
-            });
+            // txs.forEach(tx => {
+            //   try {
+            //     this.sendDrawTx(tx)
+            //   } catch (e) {
+            //     console.log(e)
+            //   }
+            // })
+            try {
+                this.sendDrawTx(txs[0]);
+            }
+            catch (e) {
+                console.log(e);
+            }
         });
     }
     sendToContract() {

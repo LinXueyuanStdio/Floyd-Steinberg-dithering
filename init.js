@@ -1,6 +1,7 @@
 const {
   eos,
-  contractPublicKey
+  contractPublicKey,
+  newPublicKey,
 } = require("./build/eos")
 
 const EOS_CONTRACT_NAME = 'eospixels'
@@ -42,6 +43,7 @@ async function init() {
   try {
     // eslint-disable-next-line no-await-in-loop
     await createAccount(EOS_CONTRACT_NAME, contractPublicKey)
+    await createAccount('user', newPublicKey)
   } catch (error) {
     console.error(
       `Cannot create account ${EOS_CONTRACT_NAME} "${getErrorDetail(error)}"`,

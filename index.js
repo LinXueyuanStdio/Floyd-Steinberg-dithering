@@ -2,7 +2,7 @@
 
 const program = require('commander')
 const chalk = require('chalk')
-const dth = require('./build/dth')
+const dth = require('./dth')
 
 program
     .command('example') // 命令行指令

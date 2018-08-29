@@ -9,7 +9,7 @@ import {
   toCoordinate,
   IPixel
 } from './pixel'
-import { eos, options } from './eos'
+import { eos, options, keyProvider } from './eos'
 import config from './config'
 import { packMemo, normalizePrice } from './packMemo'
 
@@ -210,7 +210,7 @@ class ImageContract {
   getPrice(pixels: IPixel[]): number {
     let price: number = 0
     for (const draftPixel of pixels) {
-      price += draftPixel.priceCounter
+      price += draftPixel.price
     }
 
     return price
@@ -260,24 +260,38 @@ class ImageContract {
     const assetQuantity = normalizePrice(Number(tx.price.toFixed(4)))
     const asset = `${assetQuantity} ${config.EOS_CORE_SYMBOL}`
 
-    token.then((t: any) => {
-      t.transfer(
-        tx.user,
-        config.EOS_CONTRACT_NAME,
-        asset,
-        tx.memo,
-      )
+    eos.transaction((tr: any) => {
+      tr.transfer({
+        from: tx.user,
+        to: config.EOS_CONTRACT_NAME,
+        quantity: asset,
+        memo: tx.memo,
+      })
     }, options)
+    // token.then((t: any) => {
+    //   t.transfer({
+    //     from: tx.user,
+    //     to: config.EOS_CONTRACT_NAME,
+    //     quantity: asset,
+    //     memo: tx.memo,
+    //   })
+    // }, options)
   }
 
   public async sendDrawTxs(txs: IDrawTX[]) {
-    txs.forEach(tx => {
-      try {
-        this.sendDrawTx(tx)
-      } catch (e) {
-        console.log(e)
-      }
-    })
+    // txs.forEach(tx => {
+    //   try {
+    //     this.sendDrawTx(tx)
+    //   } catch (e) {
+    //     console.log(e)
+    //   }
+    // })
+
+    try {
+      this.sendDrawTx(txs[0])
+    } catch (e) {
+      console.log(e)
+    }
   }
 
   public async sendToContract() {
