@@ -196,9 +196,7 @@ class ImageContract {
     return eos.contract('eosio.token')
   }
 
-  user() {
-    return 'user'
-  }
+  user() { return 'user' }
 
   createMemo(pixels: IPixel[]): string {
     const memos: string[] = []
@@ -226,7 +224,7 @@ class ImageContract {
 
     for (let i = 0; i < batchSize; i++) {
       const a = i * size
-      const b = a * size
+      const b = a + size
       actionPixelArrays.push(dpixels.slice(a, b))
     }
     return actionPixelArrays

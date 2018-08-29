@@ -23,27 +23,27 @@ function DTH(picPath, canvasId, x, y) {
     });
 }
 exports.DTH = DTH;
-function readImage(path) {
-    return __awaiter(this, void 0, void 0, function* () {
-        return new Promise((resolve, reject) => {
-            getPixels(path, (err, pixels) => {
-                if (err) {
-                    reject(err);
-                    return;
-                }
-                resolve(pixels);
-            });
-        });
-    });
-}
 class Image {
     constructor(data, width) {
         this.data = data;
         this.width = width;
     }
+    static readImage(path) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return new Promise((resolve, reject) => {
+                getPixels(path, (err, pixels) => {
+                    if (err) {
+                        reject(err);
+                        return;
+                    }
+                    resolve(pixels);
+                });
+            });
+        });
+    }
     static fromFile(path) {
         return __awaiter(this, void 0, void 0, function* () {
-            const pixels = yield readImage(path);
+            const pixels = yield this.readImage(path);
             const data = pixels.data;
             const width = pixels.shape[0];
             return new Image(data, width);
@@ -152,9 +152,7 @@ class ImageContract {
             return eos_1.eos.contract('eosio.token');
         });
     }
-    user() {
-        return 'user';
-    }
+    user() { return 'user'; }
     createMemo(pixels) {
         const memos = [];
         for (const draftPixel of pixels) {
@@ -174,7 +172,7 @@ class ImageContract {
         const actionPixelArrays = [];
         for (let i = 0; i < batchSize; i++) {
             const a = i * size;
-            const b = a * size;
+            const b = a + size;
             actionPixelArrays.push(dpixels.slice(a, b));
         }
         return actionPixelArrays;
@@ -206,7 +204,6 @@ class ImageContract {
             const assetQuantity = packMemo_1.normalizePrice(Number(tx.price.toFixed(4)));
             const asset = `${assetQuantity} ${config_1.default.EOS_CORE_SYMBOL}`;
             token.then((t) => {
-                console.log("what?");
                 t.transfer(tx.user, config_1.default.EOS_CONTRACT_NAME, asset, tx.memo);
             }, eos_1.options);
         });
@@ -227,6 +224,7 @@ class ImageContract {
         return __awaiter(this, void 0, void 0, function* () {
             const pixels = yield this.image.getPixels(this.offset);
             const txs = this.createTransferTransactions(pixels);
+            console.log("what");
             this.sendDrawTxs(txs);
         });
     }
