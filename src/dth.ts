@@ -9,7 +9,7 @@ import {
   toCoordinate,
   IPixel
 } from './pixel'
-import { eos, options, contractPublicKey } from './eos'
+import { eos, options } from './eos'
 import config from './config'
 import { packMemo, normalizePrice } from './packMemo'
 
@@ -44,11 +44,9 @@ export async function DTH(picPath: string, canvasId: string, x: number, y: numbe
   imgContract.sendToContract()
 }
 
-
-
 class Image {
   constructor(public data: Buffer, public width: number) { }
-  
+
   public static async readImage(path: string): Promise<any> {
     return new Promise((resolve: any, reject: any) => {
       getPixels(path, (err: any, pixels: any) => {
@@ -196,7 +194,7 @@ class ImageContract {
     return eos.contract('eosio.token')
   }
 
-  user() { return 'user' }
+  user(): string { return 'user' }
 
   createMemo(pixels: IPixel[]): string {
     const memos: string[] = []

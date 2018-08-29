@@ -224,7 +224,6 @@ class ImageContract {
         return __awaiter(this, void 0, void 0, function* () {
             const pixels = yield this.image.getPixels(this.offset);
             const txs = this.createTransferTransactions(pixels);
-            console.log("what");
             this.sendDrawTxs(txs);
         });
     }

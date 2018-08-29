@@ -316,7 +316,6 @@ export function palette(color: Color): Color {
 
   return colorArr[distanceArr.indexOf(Math.min(...distanceArr))]
 }
-
 export function paletteIndex(color: Color): number {
   var distanceArr: Array<number> = []
   colorArr.forEach((c: Color) => {

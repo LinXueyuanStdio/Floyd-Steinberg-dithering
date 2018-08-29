@@ -16,16 +16,15 @@ export const network = {
   port, // ( or null if defaulting to 80 )
   chainId,
 }
-var privateKey = '5JEaBRN2dFjDbRTo3qKmxihuNypKXMXDnXR2RoW9h95WKkBWNuT'
-var publicKey = 'EOS6qudPhRfbzysuQxPzQAM8bVoajja1swsHqBUnK1VZnBSEp1RRv'
+var newPrivateKey = '5JEaBRN2dFjDbRTo3qKmxihuNypKXMXDnXR2RoW9h95WKkBWNuT'
+var newPublicKey = 'EOS6qudPhRfbzysuQxPzQAM8bVoajja1swsHqBUnK1VZnBSEp1RRv'
+
+const contractPrivateKey = config.CONTRACT_PRIVATE_KEY // `5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3`
+const contractPublicKey = ecc.privateToPublic(contractPrivateKey)
 
 const eosioPrivateKey = `5KQwrPbwdL6PhXujxW37FSSQZ1JiwsST4cqQzDeyXtP79zkvFD3`
 
-const contractPrivate = config.CONTRACT_PRIVATE_KEY
-export const contractPublicKey = ecc.privateToPublic(contractPrivate)
-
-
-const keyProvider = [eosioPrivateKey, contractPrivate, privateKey]
+const keyProvider = [newPrivateKey, contractPrivateKey]
 
 const logger = { error: null }
 
@@ -36,7 +35,7 @@ export const options = {
   }],
   broadcast: true,
   keyProvider: keyProvider, // public EOS7Hno3TWSNC9AXiXJCbQ3DSSiXxcHJe3qsQ4uenkQBnHHFjvVHV
-  sign: true
+  sign: true,
 }
 
 export const eos = Eos({
