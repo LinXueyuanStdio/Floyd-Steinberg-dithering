@@ -40,7 +40,7 @@ interface IDrawTX {
 export async function DTH(picPath: string, canvasId: string, x: number, y: number) {
   let img = await Image.fromFile(picPath)
   img.dithering()
-  let imgContract = new ImageContract(img, {x,y}, canvasId)
+  let imgContract = new ImageContract(img, { x, y }, canvasId)
   imgContract.sendToContract()
 }
 
@@ -249,25 +249,29 @@ class ImageContract {
     const assetQuantity = normalizePrice(Number(tx.price.toFixed(4)))
     const asset = `${assetQuantity} ${config.EOS_CORE_SYMBOL}`
 
-    return token.transfer(
-      tx.user,
-      config.EOS_CONTRACT_NAME,
-      asset,
-      tx.memo,
-    )
+    token.then((t: any) => {
+      t.transfer(
+        tx.user,
+        config.EOS_CONTRACT_NAME,
+        asset,
+        tx.memo,
+      )
+    }, options)
   }
 
   public async sendDrawTxs(txs: IDrawTX[]) {
-    try {
-      txs.forEach(tx => this.sendDrawTx(tx))
-    } catch (e) {
-      console.log(e)
-    }
+    txs.forEach(tx => {
+      try {
+        this.sendDrawTx(tx)
+      } catch (e) {
+        console.log(e)
+      }
+    })
   }
 
-  public async sendToContract(){
+  public async sendToContract() {
     const pixels: IPixel[] = await this.image.getPixels(this.offset)
     const txs: IDrawTX[] = this.createTransferTransactions(pixels)
-    await this.sendDrawTxs(txs)
+    this.sendDrawTxs(txs)
   }
 }

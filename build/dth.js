@@ -14,6 +14,28 @@ const pixel_1 = require("./pixel");
 const eos_1 = require("./eos");
 const config_1 = require("./config");
 const packMemo_1 = require("./packMemo");
+function DTH(picPath, canvasId, x, y) {
+    return __awaiter(this, void 0, void 0, function* () {
+        let img = yield Image.fromFile(picPath);
+        img.dithering();
+        let imgContract = new ImageContract(img, { x, y }, canvasId);
+        imgContract.sendToContract();
+    });
+}
+exports.DTH = DTH;
+function readImage(path) {
+    return __awaiter(this, void 0, void 0, function* () {
+        return new Promise((resolve, reject) => {
+            getPixels(path, (err, pixels) => {
+                if (err) {
+                    reject(err);
+                    return;
+                }
+                resolve(pixels);
+            });
+        });
+    });
+}
 class Image {
     constructor(data, width) {
         this.data = data;
@@ -183,161 +205,29 @@ class ImageContract {
             const token = yield this.tokenContract();
             const assetQuantity = packMemo_1.normalizePrice(Number(tx.price.toFixed(4)));
             const asset = `${assetQuantity} ${config_1.default.EOS_CORE_SYMBOL}`;
-            return token.transfer(tx.user, config_1.default.EOS_CONTRACT_NAME, asset, tx.memo);
+            token.then((t) => {
+                t.transfer(tx.user, config_1.default.EOS_CONTRACT_NAME, asset, tx.memo);
+            }, eos_1.options);
         });
     }
     sendDrawTxs(txs) {
         return __awaiter(this, void 0, void 0, function* () {
-            try {
-                txs.forEach(tx => this.sendDrawTx(tx));
-            }
-            catch (e) {
-                console.log(e);
-            }
+            txs.forEach(tx => {
+                try {
+                    this.sendDrawTx(tx);
+                }
+                catch (e) {
+                    console.log(e);
+                }
+            });
         });
     }
     sendToContract() {
         return __awaiter(this, void 0, void 0, function* () {
             const pixels = yield this.image.getPixels(this.offset);
             const txs = this.createTransferTransactions(pixels);
-            yield this.sendDrawTxs(txs);
+            this.sendDrawTxs(txs);
         });
     }
 }
-function readImage(path) {
-    return __awaiter(this, void 0, void 0, function* () {
-        return new Promise((resolve, reject) => {
-            getPixels(path, (err, pixels) => {
-                if (err) {
-                    reject(err);
-                    return;
-                }
-                resolve(pixels);
-            });
-        });
-    });
-}
-function DTH(picPath, canvasId, x, y) {
-    return __awaiter(this, void 0, void 0, function* () {
-        let img = yield Image.fromFile(picPath);
-        img.dithering();
-        let imgContract = new ImageContract(img, { x, y }, canvasId);
-        imgContract.sendToContract();
-    });
-}
-exports.DTH = DTH;
-// var dithering = (data: Buffer, w: number) => {
-//   for (var i = 0; i < data.length; i += 4) {
-//     var oldColor = {
-//       r: data[i + 0],
-//       g: data[i + 1],
-//       b: data[i + 2],
-//       a: data[i + 3],
-//     };
-//     var newColor = palette(oldColor);
-//     data[i + 0] = newColor.r;
-//     data[i + 1] = newColor.g;
-//     data[i + 2] = newColor.b;
-//     data[i + 3] = newColor.a;
-//     var err = getColorError(oldColor, newColor);
-//     data[i + 0 + 4] += 7 / 16 * err.r;
-//     data[i + 1 + 4] += 7 / 16 * err.g;
-//     data[i + 2 + 4] += 7 / 16 * err.b;
-//     data[i + 3 + 4] += 7 / 16 * err.a;
-//     data[i + 0 + w * 4 - 4] += 3 / 16 * err.r;
-//     data[i + 1 + w * 4 - 4] += 3 / 16 * err.g;
-//     data[i + 2 + w * 4 - 4] += 3 / 16 * err.b;
-//     data[i + 3 + w * 4 - 4] += 3 / 16 * err.a;
-//     data[i + 0 + w * 4] += 5 / 16 * err.r;
-//     data[i + 1 + w * 4] += 5 / 16 * err.g;
-//     data[i + 2 + w * 4] += 5 / 16 * err.b;
-//     data[i + 3 + w * 4] += 5 / 16 * err.a;
-//     data[i + 0 + w * 4 + 4] += 1 / 16 * err.r;
-//     data[i + 1 + w * 4 + 4] += 1 / 16 * err.g;
-//     data[i + 2 + w * 4 + 4] += 1 / 16 * err.b;
-//     data[i + 3 + w * 4 + 4] += 1 / 16 * err.a;
-//   }
-//   return data
-// }
-// var data2TxPixelArr = (data: Buffer, w: number, offsetX: number, offsetY: number): Array<IPixel> => {
-//   var pixels: Array<IPixel> = []
-//   for (var i = 0; i < data.length; i += 4) {
-//     var c = {
-//       r: data[i + 0],
-//       g: data[i + 1],
-//       b: data[i + 2],
-//       a: data[i + 3],
-//     };
-//     pixels.push({
-//       coordinate: toCoordinate(offsetX + i % w, offsetY + Math.floor(i / w)),
-//       colorIndex: paletteIndex(c),
-//       price: config.DEFAULT_PRICE,
-//       priceCounter: 0
-//     })
-//   }
-//   return pixels
-// }
-// var data2Tx = (data: Buffer, w: number, offsetX: number, offsetY: number): Array<IPixel> => {
-//   return data2TxPixelArr(dithering(data, w), w, offsetX, offsetY)
-// }
-// var sendTx = async (pixels: Array<IPixel>, canvasId: string) => {
-//   const transactionCount = Math.ceil(
-//     pixels.length / config.PIXELS_PER_TRANSACTION,
-//   )
-//   const txPixelArrays: Array<Array<IPixel>> = []
-//   for (let i = 0; i < transactionCount; i++) {
-//     const startIndex = i * config.PIXELS_PER_TRANSACTION
-//     txPixelArrays[i] = pixels.slice(
-//       startIndex,
-//       startIndex + config.PIXELS_PER_TRANSACTION,
-//     )
-//   }
-//   try {
-//     for (const txPixels of txPixelArrays) {
-//       const batchSize = Math.ceil(txPixels.length / config.PIXELS_PER_ACTION)
-//       const actionPixelArrays: Array<Array<IPixel>> = []
-//       for (let i = 0; i < batchSize; i++) {
-//         const startIndex = i * config.PIXELS_PER_ACTION
-//         actionPixelArrays[i] = txPixels.slice(
-//           startIndex,
-//           startIndex + config.PIXELS_PER_ACTION,
-//         )
-//       }
-//       for (const pixels of actionPixelArrays) {
-//         let price = 0
-//         const memos: string[] = []
-//         for (const draftPixel of pixels) {
-//           memos.push(
-//             packMemo(draftPixel.coordinate, draftPixel.colorIndex, draftPixel.priceCounter),
-//           )
-//           price += draftPixel.price
-//         }
-//         console.log("transfer " + price)
-//         await asyncTx(price, memos)
-//         break;
-//       }
-//       break;
-//     }
-//   } catch (e) {
-//     console.log("err" + e)
-//   }
-// }
-// var asyncTx = async (price: number, memos: string[]): Promise<void> => {
-//   eos.contract('eosio.token').then((token: any) => {
-//     token.transfer(
-//       'user',
-//       config.EOS_CONTRACT_NAME,
-//       `${normalizePrice(Number(price.toFixed(4)))} ${
-//       config.EOS_CORE_SYMBOL
-//       }`,
-//       memos.join(',')
-//     )
-//   }, options)
-// }
-// export async function DTH(picPath: string, canvasId: string, x: number, y: number) {
-//   let pixels = await readImage(picPath)
-//   var data = pixels.data
-//   var w = pixels.shape[0]
-//   sendTx(data2Tx(data, w, x, y), canvasId)
-// }
 //# sourceMappingURL=dth.js.map
